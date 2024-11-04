@@ -9,5 +9,6 @@ bool PlatformFreeMemory(void *Memory);
 uptr PlatformFormatString(char *Format, ...);
 
 #define Print(format, ...) do { PlatformFormatString(format, __VA_ARGS__); } while(0)
+#define Log Print
 
 #endif
