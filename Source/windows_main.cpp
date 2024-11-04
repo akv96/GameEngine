@@ -62,6 +62,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
 {
     int Result = -1;
 
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
     WNDCLASSEXW WindowClass = {};
     WindowClass.cbSize = sizeof(WNDCLASSEX);
     WindowClass.style  = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -69,6 +71,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     WindowClass.hInstance = Instance;    
     WindowClass.hCursor = LoadCursorA(0, IDC_ARROW);
     WindowClass.lpszClassName = ANSIToUTF16("Game Engine");
+    WindowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     if(!WindowClass.lpszClassName)
     {
         Log("Failed to construct WindowClass.lpszClassName as a UTF-16 string\n");;
@@ -81,10 +84,32 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
         return Result;
     }
 
-    HWND Window = CreateWindowExW(0, WindowClass.lpszClassName, WindowClass.lpszClassName, WS_OVERLAPPEDWINDOW | WS_VISIBLE, MAIN_WINDOW_X, MAIN_WINDOW_Y, MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, 0, 0, Instance, 0);
+    HWND Window = CreateWindowExW(0, WindowClass.lpszClassName, WindowClass.lpszClassName, WS_OVERLAPPEDWINDOW, MAIN_WINDOW_X, MAIN_WINDOW_Y, MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, 0, 0, Instance, 0);
     if(!Window)
     {
         Log("CreateWindowExW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    HDC DeviceContext = GetDC(Window);
+    if(!DeviceContext)
+    {
+        Log("GetDC() failed\n");
+        return Result;
+    }
+
+    RECT WindowRectangle = {};
+    WindowRectangle.right = MAIN_WINDOW_WIDTH;
+    WindowRectangle.bottom = MAIN_WINDOW_HEIGHT;
+    if(!AdjustWindowRectExForDpi(&WindowRectangle, WS_OVERLAPPEDWINDOW, FALSE, 0, GetDpiForWindow(Window)))
+    {
+        Log("AdjustWindowRectExForDpi() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    if(!SetWindowPos(Window, 0, 0, 0, WindowRectangle.right - WindowRectangle.left, WindowRectangle.bottom - WindowRectangle.top, SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW))
+    {
+        Log("SetWindowPos() failed: 0x%X\n", GetLastError());
         return Result;
     }
 
