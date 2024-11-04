@@ -14,6 +14,33 @@ struct windows_video
     platform_video State;    
 };
 
+struct window_dimension
+{
+    int X;
+    int Y;
+    int Width;
+    int Height;
+};
+
+internal_function bool
+WindowsGetWindowDimension(HWND Window, window_dimension *WindowDimension)
+{
+    bool Result = 0;
+
+    RECT ClientRect = {};
+    if(!GetClientRect(Window, &ClientRect))
+    {
+        Log("GetClientRect() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    WindowDimension->Width = ClientRect.right - ClientRect.left;
+    WindowDimension->Height = ClientRect.bottom - ClientRect.top;
+
+    Result = 1;
+    return Result;
+}
+
 internal_function WCHAR *
 ANSIToUTF16(char *ANSI)
 {
@@ -172,7 +199,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     }
 
     bool IsRunning = 1;
-    platform_input Input[2] = {}; //@TODO: Swap pointers
+    platform_input Input[2] = {}; 
     platform_input *OldInput = &Input[0];
     platform_input *NewInput = &Input[1];
     while(IsRunning)
@@ -209,6 +236,21 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
             platform_video MainDLLVideo = WindowsVideo.State;        
             WindowsMainDLL.GameUpdateAndRender(&MainDLLMemory, &MainDLLVideo, NewInput);
         }
+
+        window_dimension WindowDimension = {};
+        if(WindowsGetWindowDimension(Window, &WindowDimension))
+        {
+            StretchDIBits(DeviceContext, 0, 0, WindowDimension.Width, WindowDimension.Height, 0, 0, WindowsVideo.State.Width, WindowsVideo.State.Height, WindowsVideo.State.Memory, &WindowsVideo.Info, DIB_RGB_COLORS, SRCCOPY);
+        }
+
+        for(int Index = 0; Index < ArrayCount(OldInput->Controller[0].Button); Index++)        
+        {
+            OldInput->Controller[0].Button[Index].IsDown = NewInput->Controller[0].Button[Index].IsDown;
+        }
+
+        platform_input *TemporaryInput = OldInput;
+        OldInput = NewInput;
+        NewInput = TemporaryInput;
     }
     
     Result = 0;
