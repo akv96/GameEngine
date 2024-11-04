@@ -1,11 +1,18 @@
-#include "Header/definitions.hpp"
-#include "Library/platform.hpp"
-#include <windows.h>
+#include "windows_main.hpp"
 
-#define MAIN_WINDOW_X 0
-#define MAIN_WINDOW_Y 0
-#define MAIN_WINDOW_WIDTH 1280
-#define MAIN_WINDOW_HEIGHT 720
+#define GAME_DLL_FILE_NAME L"main.dll"
+
+struct windows_main_dll
+{
+    HMODULE Library;
+    game_update_and_render *GameUpdateAndRender;
+};
+
+struct windows_video
+{
+    BITMAPINFO Info;    
+    platform_video State;    
+};
 
 internal_function WCHAR *
 ANSIToUTF16(char *ANSI)
@@ -64,17 +71,68 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
+    windows_main_dll WindowsMainDLL = {};
+    WindowsMainDLL.Library = LoadLibraryW(GAME_DLL_FILE_NAME);
+    if(!WindowsMainDLL.Library)
+    {
+        Log("LoadLibraryW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    WindowsMainDLL.GameUpdateAndRender = (game_update_and_render *)GetProcAddress(WindowsMainDLL.Library, "GameUpdateAndRender");
+    if(!WindowsMainDLL.GameUpdateAndRender)
+    {
+        Log("GetProcAddress() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    platform_memory WindowsMainDLLMemory = {};
+    WindowsMainDLLMemory.PermanentMemorySize = Megabytes(256);
+    WindowsMainDLLMemory.PermanentMemory = PlatformAllocateMemory(WindowsMainDLLMemory.PermanentMemorySize);
+    if(!WindowsMainDLLMemory.PermanentMemory)
+    {
+        Log("Failed to allocate memory for main dll\n");
+        return Result;
+    }
+
+    WindowsMainDLLMemory.TemporaryMemorySize = Megabytes(256);
+    WindowsMainDLLMemory.TemporaryMemory = PlatformAllocateMemory(WindowsMainDLLMemory.TemporaryMemorySize);
+    if(!WindowsMainDLLMemory.TemporaryMemory)
+    {
+        Log("Failed to allocate memory for main dll\n");
+        return Result;
+    }
+
+    windows_video WindowsVideo = {};
+    platform_video *VideoState = &WindowsVideo.State;
+    VideoState->Width = MAIN_WINDOW_WIDTH;
+    VideoState->Height = MAIN_WINDOW_HEIGHT;
+    VideoState->BytesPerPixel = 4;
+    VideoState->Pitch = VideoState->Width * VideoState->BytesPerPixel;
+    WindowsVideo.Info.bmiHeader.biSize = sizeof(WindowsVideo.Info.bmiHeader);
+    WindowsVideo.Info.bmiHeader.biWidth = VideoState->Width;
+    WindowsVideo.Info.bmiHeader.biHeight = VideoState->Height;
+    WindowsVideo.Info.bmiHeader.biPlanes = 1;
+    WindowsVideo.Info.bmiHeader.biBitCount = (WORD)(VideoState->BytesPerPixel * 8);
+    WindowsVideo.Info.bmiHeader.biCompression = BI_RGB;
+    VideoState->Memory = PlatformAllocateMemory(VideoState->Pitch * VideoState->Height);
+    if(!VideoState->Memory)
+    {
+        Log("Failed to allocate memory for video output\n");
+        return Result;
+    }
+
     WNDCLASSEXW WindowClass = {};
     WindowClass.cbSize = sizeof(WNDCLASSEX);
     WindowClass.style  = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     WindowClass.lpfnWndProc = WindowsMainWindowCallback;
     WindowClass.hInstance = Instance;    
     WindowClass.hCursor = LoadCursorA(0, IDC_ARROW);
-    WindowClass.lpszClassName = ANSIToUTF16("Game Engine");
-    WindowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+    WindowClass.lpszClassName = L"Game Engine";
+    
     if(!WindowClass.lpszClassName)
     {
-        Log("Failed to construct WindowClass.lpszClassName as a UTF-16 string\n");;
+        Log("Failed to construct WindowClass.lpszClassName as a UTF-16 string\n");
         return Result;
     }
 
@@ -114,6 +172,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     }
 
     bool IsRunning = 1;
+    platform_input Input[2] = {}; //@TODO: Swap pointers
+    platform_input *OldInput = &Input[0];
+    platform_input *NewInput = &Input[1];
     while(IsRunning)
     {
         MSG Message = {};
@@ -140,6 +201,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
         if(!IsRunning)
         {
             break;
+        }
+
+        if(WindowsMainDLL.GameUpdateAndRender)
+        {
+            platform_memory MainDLLMemory = WindowsMainDLLMemory;
+            platform_video MainDLLVideo = WindowsVideo.State;        
+            WindowsMainDLL.GameUpdateAndRender(&MainDLLMemory, &MainDLLVideo, NewInput);
         }
     }
     
