@@ -1,50 +1,86 @@
 #include "windows_main.h"
 
+LRESULT WindowsMainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
+{
+    LRESULT Result = 0;
+
+    switch(Message)
+    {
+        case WM_CLOSE:
+        {
+            DestroyWindow(Window);
+        } break;
+
+        case WM_DESTROY:
+        {
+            PostQuitMessage(0);
+        } break;
+
+        //@TODO: WM_PAINT
+
+        default:
+        {
+            Result = DefWindowProcW(Window, Message, WParam, LParam);
+        } break;
+    }
+
+    return Result;
+}
 int APIENTRY
 WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int ShowCode)
 {
     int Result = -1;
 
-    Print("%% Hello, world! %%\n");
-    Print("%% Hello, world! %%\n");
-    Print("%% Hello, world! %%\n");
+    WNDCLASSEXW WindowClass = {0};
+    WindowClass.cbSize = sizeof(WNDCLASSEX);
+    WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    WindowClass.lpfnWndProc = WindowsMainWindowCallback;
+    WindowClass.hInstance = Instance;
+    WindowClass.hCursor = LoadCursorA(0, IDC_ARROW);
+    //WindowsClasshbrBackground;
+    WindowClass.lpszClassName = L"Game Engine";
+    if(!RegisterClassExW(&WindowClass))
+    {
+        Log("RegisterClassExW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
 
-    Print("%c %c %c\n", 'A', 'B', 'C');
-    Print("%c %c %c\n", 'A', 'B', 'C');
-    Print("%c %c %c\n", 'A', 'B', 'C');
+    HWND Window = CreateWindowExW(0, WindowClass.lpszClassName, WindowClass.lpszClassName, WS_OVERLAPPEDWINDOW | WS_VISIBLE, MAIN_WINDOW_X, MAIN_WINDOW_Y, MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, 0, 0, Instance, 0);
+    if(!Window)
+    {
+        Log("CreateWindowExW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
 
-    Print("%d %d %d\n", 0, -1, 1234);
-    Print("%d %d %d\n", 0, -1, 1234);
-    Print("%d %d %d\n", 0, -1, 1234);
+    bool IsRunning = 1;
+    while(IsRunning)
+    {
+        MSG Message = {0};
+        while(PeekMessageW(&Message, 0, 0, 0, PM_REMOVE))
+        {
+            switch(Message.message)
+            {
+                case WM_QUIT:
+                {
+                    TranslateMessage(&Message);
+                    DispatchMessageW(&Message);
 
-    Print("%f %f %f\n", 0.0, -1.0, 1.234);
-    Print("%f %f %f\n", 0.0, -1.0, 1.234);
-    Print("%f %f %f\n", 0.0, -1.0, 1.234);
+                    IsRunning = 0;
+                } break;
 
-    Print("%lld %lli\n", 9223372036854775807, 9223372036854775807);
+                default:
+                {
+                    TranslateMessage(&Message);
+                    DispatchMessageW(&Message);
+                } break;
+            }            
+        }
 
-    Print("%llu\n", 18446744073709551615);
-
-    Print("%o %o %o\n", 0, 8, 16);
-    Print("%o %o %o\n", 0, 8, 16);
-    Print("%o %o %o\n", 0, 8, 16);
-
-    Print("%p %p %p\n", 0, WinMain, Instance);
-    Print("%p %p %p\n", 0, WinMain, Instance);
-    Print("%p %p %p\n", 0, WinMain, Instance);
-
-    Print("%s %s %s\n", "ABC", "DEF", "GHI");
-    Print("%s %s %s\n", "ABC", "DEF", "GHI");
-    Print("%s %s %s\n", "ABC", "DEF", "GHI");
-
-    Print("%u %u %u\n", 0, -1, 1234);
-    Print("%u %u %u\n", 0, -1, 1234);
-    Print("%u %u %u\n", 0, -1, 1234);
-
-    Print("%x %X %x\n", 0, -1, 255);
-    Print("%x %X %x\n", 0, -1, 255);
-    Print("%x %X %x\n", 0, -1, 255);
-
+        if(!IsRunning)
+        {
+            break;
+        }
+    }
     Result = 0;
     return Result;
 }

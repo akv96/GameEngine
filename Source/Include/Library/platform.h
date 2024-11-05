@@ -9,6 +9,6 @@ bool PlatformFreeMemory(void *Memory);
 uptr PlatformPrint(char *Format, ...);
 
 #define Print(format, ...) do { PlatformPrint(format, __VA_ARGS__); } while(0)
-#define Log Print
+#define Log(format, ...) Print("File: %s\nFunction: %s\nLine: %u\nMessage: " format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #endif
