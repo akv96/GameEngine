@@ -1,4 +1,4 @@
-#include "Header/definitions.hpp"
+#include "Header/definitions.h"
 
 internal_function uptr
 StringLength(char *String)
@@ -74,8 +74,8 @@ CopySigned32ToBuffer(char *Buffer, uptr BufferSize, s32 Value, int Base, char *R
 
     if(IsNegative)
     {
-        WorkBuffer[WorkBufferIndex] = '-';        
-    }    
+        WorkBuffer[WorkBufferIndex] = '-';
+    }
     else
     {
         WorkBufferIndex++;
@@ -135,8 +135,8 @@ CopySigned64ToBuffer(char *Buffer, uptr BufferSize, s64 Value, int Base, char *R
 
     if(IsNegative)
     {
-        WorkBuffer[WorkBufferIndex] = '-';        
-    }    
+        WorkBuffer[WorkBufferIndex] = '-';
+    }
     else
     {
         WorkBufferIndex++;
@@ -186,7 +186,7 @@ CopyFloat64ToBuffer(char *Buffer, uptr BufferSize, f64 Value, int Precision)
         IntegerPart = -IntegerPart;
     }
 
-    Value -= IntegerPart;
+    Value -=IntegerPart;
 
     for(int Index = 0; Index < Precision; Index++)
     {

@@ -1,41 +1,39 @@
-#include "platform.hpp"
+#include "platform.h"
 
 #ifdef WINDOWS_OS
-    #include <windows.h>
+#include <windows.h>
 #else
-    #error
+#error
 #endif
 
-#include "Code/string.cpp"
-
-typedef u8* va_arg;
+typedef u8* va_args;
 
 #define VAGet(args, type) *(type *)VAGet_(args)
 
-internal_function va_arg
+#include "Code/string.c"
+
+internal_function va_args
 VABegin(void *Format)
 {
-    va_arg Result = 0;
+    va_args Result = 0;
 
     Result = (u8 *)Format + POINTER_SIZE;
-
     return Result;
 }
 
-internal_function va_arg
+internal_function va_args
 VAEnd()
 {
-    va_arg Result = 0;
+    va_args Result = 0;
 
     return Result;
 }
 
 internal_function void *
-VAGet_(va_arg *Args)
+VAGet_(va_args *Args)
 {
-    void *Result = 0;
+    void *Result = *Args;
 
-    Result = *Args;
     *Args += POINTER_SIZE;
 
     return Result;
@@ -44,7 +42,7 @@ VAGet_(va_arg *Args)
 void PlatformWriteConsole(char *String)
 {
 #ifdef WINDOWS_OS
-    OutputDebugString(String);
+    OutputDebugStringA(String);
 #else
     #error
 #endif
@@ -54,11 +52,17 @@ void *PlatformAllocateMemory(uptr Size)
 {
     void *Result = 0;
 
+    if(!Size)
+    {
+        PlatformWriteConsole("Attempt to allocate memory of size 0\n");
+        return Result;
+    }
+
 #ifdef WINDOWS_OS
     Result = VirtualAlloc(0, Size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if(!Result)
     {
-        PlatformWriteConsole("VirtualAlloc() failed\n");
+        PlatformWriteConsole("Failed to allocate memory\n");
         return Result;
     }
 #else
@@ -74,14 +78,14 @@ bool PlatformFreeMemory(void *Memory)
 
     if(!Memory)
     {
-        PlatformWriteConsole("Parameter Memory is 0\n");
+        PlatformWriteConsole("Attempt to free memory that is 0\n");
         return Result;
     }
 
 #ifdef WINDOWS_OS
     if(!VirtualFree(Memory, 0, MEM_RELEASE))
     {
-        PlatformWriteConsole("VirtualFree() failed\n");
+        PlatformWriteConsole("Failed to free memory\n");
         return Result;
     }
 #else
@@ -92,19 +96,18 @@ bool PlatformFreeMemory(void *Memory)
     return Result;
 }
 
-uptr PlatformFormatString(char *Format, ...)
+uptr PlatformPrint(char *Format, ...)
 {
     uptr Result = 0;
-
-    va_arg Args = VABegin(&Format);
 
     uptr BufferSize = 1024;
     char *Buffer = (char *)PlatformAllocateMemory(BufferSize);
     if(!Buffer)
     {
-        PlatformWriteConsole("Failed to allocate buffer\n");
         return Result;
     }
+
+    va_args Args = VABegin(&Format);
 
     char *Octal = "01234567";
     char *Decimal = "0123456789";
@@ -122,7 +125,7 @@ uptr PlatformFormatString(char *Format, ...)
         if(*++c == '%')
         {
             Result += CopyCharacterToBuffer(Buffer + Result, BufferSize - Result, *c);
-            c++;            
+            c++;
         }
         else if(*c == 'c')
         {
@@ -181,6 +184,7 @@ uptr PlatformFormatString(char *Format, ...)
         else if((*c == 'x') || (*c == 'X'))
         {
             u32 Value = VAGet(&Args, u32);
+            
             if(*c == 'x')
             {
                 Result += CopyUnsigned32ToBuffer(Buffer + Result, BufferSize - Result, Value, 16, HexadecimalLowercase);
@@ -194,22 +198,16 @@ uptr PlatformFormatString(char *Format, ...)
         }
         else
         {
+            Assert(0);
             PlatformWriteConsole("Invalid format specifier\n");
-            Result = 0;
             break;
         }
     }
-    
+
     Args = VAEnd();
 
-    if(Result > 0)
-    {
-        Buffer[Result] = '\0';
-        PlatformWriteConsole(Buffer);
-    }
-
+    PlatformWriteConsole(Buffer);
     PlatformFreeMemory(Buffer);
-    Buffer = 0;
 
     return Result;
 }
