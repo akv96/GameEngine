@@ -24,4 +24,12 @@ typedef struct
     BITMAPINFO Info;
 } windows_video;
 
+typedef struct
+{
+    int X;
+    int Y;
+    int Width;
+    int Height;
+} window_dimension;
+
 #endif

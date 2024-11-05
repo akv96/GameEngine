@@ -1,6 +1,25 @@
 #include "windows_main.h"
 
 internal_function bool
+WindowsGetWindowDimension(HWND Window, window_dimension *WindowDimension)
+{
+    bool Result = 0;
+
+    RECT ClientRectangle = {0};
+    if(!GetClientRect(Window, &ClientRectangle))
+    {
+        Log("GetClientRect() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    WindowDimension->Width = ClientRectangle.right - ClientRectangle.left;
+    WindowDimension->Height = ClientRectangle.bottom - ClientRectangle.top;
+
+    Result = 1;
+    return Result;
+}
+
+internal_function bool
 WindowsLoadGameDLL(windows_game_dll *GameDLL, platform_memory *Memory, windows_video *Video)
 {
     bool Result = 0;
@@ -109,7 +128,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     WindowClass.lpfnWndProc = WindowsMainWindowCallback;
     WindowClass.hInstance = Instance;
     WindowClass.hCursor = LoadCursorA(0, IDC_ARROW);
-    WindowClass.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     WindowClass.lpszClassName = L"Game Engine";
     if(!RegisterClassExW(&WindowClass))
     {
@@ -121,6 +139,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     if(!Window)
     {
         Log("CreateWindowExW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    HDC DeviceContext = GetDC(Window);
+    if(!DeviceContext)
+    {
+        Log("GetDC() failed\n");
         return Result;
     }
 
@@ -177,6 +202,12 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
             platform_video GameVideo = WindowsVideo.State;        
             GameDLL.GameUpdateAndRender(&GameMemory, &GameVideo, NewInput);
         }
+
+        window_dimension WindowDimension = {0};
+        if(WindowsGetWindowDimension(Window, &WindowDimension))
+        {
+            StretchDIBits(DeviceContext, 0, 0, WindowDimension.Width, WindowDimension.Height, 0, 0, WindowsVideo.State.Width, WindowsVideo.State.Height, WindowsVideo.State.Memory, &WindowsVideo.Info, DIB_RGB_COLORS, SRCCOPY);
+        }        
 
         //@TODO: Swap OldInput with NewInput but first copy NewInput to OldInput
     }
