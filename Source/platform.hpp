@@ -25,12 +25,14 @@ struct platform_button
 
 struct platform_controller
 {
+    int MouseX;
+    int MouseY;
     platform_button Button[256];
 };
 
 struct platform_input
-{
-    platform_controller Controller[1];
+{    
+    platform_controller Controller[1];    
 };
 
 #define GAME_UPDATE_AND_RENDER(name) void name(platform_memory *Memory, platform_video *Video, platform_input *Input)

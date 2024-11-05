@@ -230,6 +230,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
             break;
         }
 
+        POINT CursorPosition = {};
+        if(GetCursorPos(&CursorPosition) != 0)
+        {
+            NewInput->Controller[0].MouseX = (CursorPosition.x < 0) ? (0) : (CursorPosition.x);
+            NewInput->Controller[0].MouseY = (CursorPosition.y < 0) ? (0) : (CursorPosition.y);
+        }
+
         if(WindowsMainDLL.GameUpdateAndRender)
         {
             platform_memory MainDLLMemory = WindowsMainDLLMemory;

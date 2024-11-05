@@ -72,6 +72,12 @@ bool PlatformFreeMemory(void *Memory)
 {
     bool Result = 0;
 
+    if(!Memory)
+    {
+        PlatformWriteConsole("Parameter Memory is 0\n");
+        return Result;
+    }
+
 #ifdef WINDOWS_OS
     if(!VirtualFree(Memory, 0, MEM_RELEASE))
     {

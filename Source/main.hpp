@@ -4,5 +4,7 @@
 #include "Header/definitions.hpp"
 #include "Library/platform.hpp"
 #include "platform.hpp"
+#include "video.cpp"
+
 
 #endif
