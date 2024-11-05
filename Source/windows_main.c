@@ -1,5 +1,66 @@
 #include "windows_main.h"
 
+internal_function bool
+WindowsLoadGameDLL(windows_game_dll *GameDLL, platform_memory *Memory, windows_video *Video)
+{
+    bool Result = 0;
+
+    GameDLL->Library = LoadLibraryW(GAME_DLL_FILE_NAME);
+    if(!GameDLL->Library)
+    {
+        Log("LoadLibraryW() failed: 0x%X\n", GetLastError());
+        return Result;
+    }
+
+    GameDLL->GameUpdateAndRender = (game_update_and_render *)GetProcAddress(GameDLL->Library, "GameUpdateAndRender");
+    if(!GameDLL->GameUpdateAndRender)
+    {
+        Log("GetProcAddress() failed: 0x%X\n", GetLastError());
+        FreeLibrary(GameDLL->Library);
+        return Result;
+    }
+
+    Memory->PermanentMemorySize = Megabytes(256);
+    Memory->PermanentMemory = PlatformAllocateMemory(Memory->PermanentMemorySize);
+    if(!Memory->PermanentMemory)
+    {
+        FreeLibrary(GameDLL->Library);
+        return Result;
+    }
+
+    Memory->TemporaryMemorySize = Megabytes(256);
+    Memory->TemporaryMemory = PlatformAllocateMemory(Memory->TemporaryMemorySize);
+    if(!Memory->TemporaryMemory)
+    {
+        PlatformFreeMemory(Memory->PermanentMemory);
+        FreeLibrary(GameDLL->Library);
+        return Result;
+    }    
+
+    platform_video *VideoState = &Video->State;
+    VideoState->Width = MAIN_WINDOW_WIDTH;
+    VideoState->Height = MAIN_WINDOW_HEIGHT;
+    VideoState->BytesPerPixel = 4;
+    VideoState->Pitch = VideoState->Width * VideoState->BytesPerPixel;
+    Video->Info.bmiHeader.biSize = sizeof(Video->Info.bmiHeader);
+    Video->Info.bmiHeader.biWidth = VideoState->Width;
+    Video->Info.bmiHeader.biHeight = VideoState->Height;
+    Video->Info.bmiHeader.biPlanes = 1;
+    Video->Info.bmiHeader.biBitCount = (WORD)(VideoState->BytesPerPixel * 8);
+    Video->Info.bmiHeader.biCompression = BI_RGB;
+    VideoState->Memory = PlatformAllocateMemory(VideoState->Pitch * VideoState->Height);
+    if(!VideoState->Memory)
+    {
+        PlatformFreeMemory(Memory->TemporaryMemory);
+        PlatformFreeMemory(Memory->PermanentMemory);
+        FreeLibrary(GameDLL->Library);
+        return Result;
+    }
+
+    Result = 1;
+    return Result;
+}
+
 LRESULT WindowsMainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
@@ -32,6 +93,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     int Result = -1;
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    windows_game_dll GameDLL = {0};
+    platform_memory WindowsMemory = {0};
+    windows_video WindowsVideo = {0};
+    if(!WindowsLoadGameDLL(&GameDLL, &WindowsMemory, &WindowsVideo))
+    {
+        Log("Failed to load game dll\n");
+        return Result;
+    }
 
     WNDCLASSEXW WindowClass = {0};
     WindowClass.cbSize = sizeof(WNDCLASSEX);
@@ -70,6 +140,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
     }
 
     bool IsRunning = 1;
+    platform_input Input[2] = {0};
+    platform_input *OldInput = &Input[0];
+    platform_input *NewInput = &Input[1];
     while(IsRunning)
     {
         MSG Message = {0};
@@ -97,6 +170,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
         {
             break;
         }
+
+        if(GameDLL.GameUpdateAndRender)
+        {
+            platform_memory GameMemory = WindowsMemory;
+            platform_video GameVideo = WindowsVideo.State;        
+            GameDLL.GameUpdateAndRender(&GameMemory, &GameVideo, NewInput);
+        }
+
+        //@TODO: Swap OldInput with NewInput but first copy NewInput to OldInput
     }
     Result = 0;
     return Result;
