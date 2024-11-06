@@ -96,7 +96,7 @@ LRESULT WindowsMainWindowCallback(HWND Window, UINT Message, WPARAM WParam, LPAR
             PostQuitMessage(0);
         } break;
 
-        //@TODO: WM_PAINT
+        //@TODO: WM_PAINT        
 
         default:
         {
@@ -183,6 +183,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
                     IsRunning = 0;
                 } break;
 
+                case WM_MOUSEMOVE:
+                {
+                    int X = GET_X_LPARAM(Message.lParam); 
+                    int Y = GET_Y_LPARAM(Message.lParam);
+
+                    NewInput->Controller[0].MouseX = X;
+                    NewInput->Controller[0].MouseY = (WindowsVideo.State.Height - 1) - Y;
+                } break;
+
                 default:
                 {
                     TranslateMessage(&Message);
@@ -195,6 +204,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
         {
             break;
         }
+
 
         if(GameDLL.GameUpdateAndRender)
         {
@@ -209,7 +219,16 @@ WinMain(HINSTANCE Instance, HINSTANCE PreviousInstance, PSTR CommandLine, int Sh
             StretchDIBits(DeviceContext, 0, 0, WindowDimension.Width, WindowDimension.Height, 0, 0, WindowsVideo.State.Width, WindowsVideo.State.Height, WindowsVideo.State.Memory, &WindowsVideo.Info, DIB_RGB_COLORS, SRCCOPY);
         }        
 
-        //@TODO: Swap OldInput with NewInput but first copy NewInput to OldInput
+        for(int Index = 0; Index < ArrayCount(OldInput->Controller[0].Button); Index++)
+        {
+            OldInput->Controller[0].Button[Index].IsDown = NewInput->Controller[0].Button[Index].IsDown;
+            OldInput->Controller[0].MouseX = NewInput->Controller[0].MouseX;
+            OldInput->Controller[0].MouseY = NewInput->Controller[0].MouseY;
+        }
+
+        platform_input *TemporaryInput = OldInput;
+        OldInput = NewInput;
+        NewInput = TemporaryInput;
     }
     Result = 0;
     return Result;

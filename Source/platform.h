@@ -28,6 +28,8 @@ typedef struct
 typedef struct
 {
     platform_button Button[256];
+    int MouseX;
+    int MouseY;
 } platform_controller;
 
 typedef struct

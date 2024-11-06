@@ -5,6 +5,7 @@
 #include "Library/platform.h"
 #include "platform.h"
 #include <windows.h>
+#include <windowsx.h>
 
 #define MAIN_WINDOW_X 0
 #define MAIN_WINDOW_Y 0

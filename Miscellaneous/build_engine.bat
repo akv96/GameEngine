@@ -13,6 +13,6 @@ SET common_linker_flags=/DEBUG:FASTLINK /INCREMENTAL:NO /OPT:REF
 
 PUSHD "%project_dir%\Build"
 IF %ERRORLEVEL% == 0 (CL /LD %common_compiler_flags% "%project_dir%\Source\Include\Library\platform.c" /link /EXPORT:PlatformWriteConsole /EXPORT:PlatformAllocateMemory /EXPORT:PlatformFreeMemory /EXPORT:PlatformPrint %common_linker_flags%)
-IF %ERRORLEVEL% == 0 (CL /LD /Fo"game.obj" %common_compiler_flags% "%project_dir%\Source\main.c" /link /EXPORT:GameUpdateAndRender %common_linker_flags%)
+IF %ERRORLEVEL% == 0 (CL /LD /Fo"game.obj" %common_compiler_flags% "%project_dir%\Source\main.c" /link /EXPORT:GameUpdateAndRender %common_linker_flags% "platform.lib")
 IF %ERRORLEVEL% == 0 (CL %common_compiler_flags% "%project_dir%\Source\windows_main.c" /link %common_linker_flags% "kernel32.lib" "user32.lib" "gdi32.lib" "platform.lib")
 POPD

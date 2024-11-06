@@ -5,4 +5,9 @@
 #include "Library/platform.h"
 #include "platform.h"
 
+#include "math.c"
+#include "video.c"
+
+
+
 #endif
